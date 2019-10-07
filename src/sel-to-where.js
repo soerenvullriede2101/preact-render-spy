@@ -5,16 +5,16 @@ const selToWhere = sel => {
     return sel;
   }
   if (/^\./.test(sel)) {
-    return {attributes: {class: sel.substring(1)}};
+    return {props: {class: sel.substring(1)}};
   }
   else if (/^#/.test(sel)) {
-    return {attributes: {id: sel.substring(1)}};
+    return {props: {id: sel.substring(1)}};
   }
   else if (/^\[/.test(sel)) {
-    return {attributes: {[sel.substring(1, sel.length - 1)]: ATTRIBUTE_PRESENT}};
+    return {props: {[sel.substring(1, sel.length - 1)]: ATTRIBUTE_PRESENT}};
   }
 
-  return {nodeName: sel};
+  return {type: sel};
 };
 
 module.exports = {

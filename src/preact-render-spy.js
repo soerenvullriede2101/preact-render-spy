@@ -1,9 +1,12 @@
-const {render, rerender, h, Component} = require('preact');
+const {render, h, Component, cloneElement, toChildArray} = require('preact');
+const {setupRerender} = require('preact/test-utils');
 const isEqual = require('lodash.isequal');
 const renderToString = require('preact-render-to-string/jsx');
 
 const {isWhere} = require('./is-where');
 const {selToWhere} = require('./sel-to-where');
+
+const rerender = setupRerender();
 
 const config = {
   SPY_PRIVATE_KEY: 'SPY_PRIVATE_KEY',
@@ -16,18 +19,16 @@ const spyWalk = (context, vdom, depth) => {
     return vdom;
   }
   const spyCreator = depth > context.renderedDepth ? createNoopSpy : createSpy;
-  if (typeof vdom.nodeName === 'function' && !vdom.nodeName.isSpy) {
-    vdom = Object.assign({}, vdom, {
-      nodeName: spyCreator(context, vdom.nodeName),
-      attributes: Object.assign({}, vdom.attributes, {
-        [config.SPY_PRIVATE_KEY]: {vdom, depth},
-      }),
-    });
+  if (typeof vdom.type === 'function' && !vdom.type.isSpy) {
+    vdom = h(
+      spyCreator(context, vdom.type),
+      Object.assign({}, vdom.props, { [config.SPY_PRIVATE_KEY]: {vdom, depth} })
+    );
   }
-  else if (vdom.children) {
-    vdom = Object.assign({}, vdom, {
-      children: vdom.children.map(child => spyWalk(context, child, depth)),
-    });
+  else if (vdom.props && vdom.props.children) {
+    const children = toChildArray(vdom.props && vdom.props.children)
+      .map(child => spyWalk(context, child, depth));
+    vdom = cloneElement(vdom, vdom.props, children);
   }
   return vdom;
 };
@@ -49,14 +50,7 @@ const NoopSpy = ()=>{};
 const _createNoopSpy = (context, Component) => {
   return function(_props) {
     const [,, props] = popSpyKey(_props);
-    const vdom = {
-      nodeName: NoopSpy,
-      attributes: Object.assign({
-        component: Component,
-      }, props),
-      children: props.children,
-    };
-    delete vdom.attributes.children;
+    const vdom = h(NoopSpy, Object.assign({ component: Component }, props));
     return vdom;
   };
 };
@@ -127,15 +121,15 @@ const createSpy = (context, Component) => {
 };
 
 const vdomIter = function* (vdomMap, vdom) {
-  if (!vdom) {
+  if (vdom == null) {
     return;
   }
   yield vdom;
-  if (typeof vdom.nodeName === 'function' && vdomMap.has(vdom)) {
+  if (typeof vdom.type === 'function' && vdomMap.has(vdom)) {
     yield* vdomIter(vdomMap, vdomMap.get(vdom));
   }
   else {
-    for (const child of (vdom.children || [])) {
+    for (const child of toChildArray(vdom.props && vdom.props.children)) {
       yield* vdomIter(vdomMap, child);
     }
   }
@@ -223,9 +217,9 @@ class FindWrapper {
     const item = this[0];
     if (
       typeof item === 'object' &&
-      item.attributes
+      item.props
     ) {
-      return item.attributes[name];
+      return item.props[name];
     }
   }
 
@@ -238,7 +232,7 @@ class FindWrapper {
     }
     verifyFoundNodes(this);
 
-    return Object.assign({}, this[0].attributes);
+    return Object.assign({}, this[0].props);
   }
 
   /**
@@ -266,7 +260,7 @@ class FindWrapper {
 
     return new FindWrapper(
       this.context,
-      this[0].children
+      toChildArray(this[0].props && this[0].props.children)
     );
   }
 
@@ -286,9 +280,9 @@ class FindWrapper {
       const eventlc = event.toLowerCase();
       const eventKeys = new Set([`on${eventlc}`, `on${eventlc}capture`]);
 
-      for (const key in vdom.attributes) {
+      for (const key in vdom.props) {
         if (eventKeys.has(key.toLowerCase())) {
-          vdom.attributes[key](...args);
+          vdom.props[key](...args);
           break;
         }
       }
@@ -348,7 +342,7 @@ class FindWrapper {
       throw new Error('preact-render-spy: Must have only 1 result for .output().');
     }
 
-    if (!this[0] || typeof this[0].nodeName !== 'function') {
+    if (!this[0] || typeof this[0].type !== 'function') {
       throw new Error('preact-render-spy: Must have a result of a preact class or function component for .output()');
     }
     verifyFoundNodes(this);
@@ -367,9 +361,9 @@ class FindWrapper {
         return nodeOutput;
       }
       const clone = h(
-        nodeOutput.nodeName,
-        nodeOutput.attributes,
-        nodeOutput.children && nodeOutput.children.map(getOutput)
+        nodeOutput.type,
+        nodeOutput.props,
+        toChildArray(nodeOutput.props && nodeOutput.props.children).map(getOutput)
       );
 
       return clone;
@@ -381,7 +375,7 @@ class FindWrapper {
   toString() {
     verifyFoundNodes(this);
     const render = (jsx, index) => {
-      if (typeof jsx.nodeName === 'function') {
+      if (typeof jsx.type === 'function') {
         jsx = this.at(index).output();
       }
       if (!jsx) return `{${JSON.stringify(jsx)}}`;
@@ -445,14 +439,10 @@ class RenderContext extends FindWrapper {
     });
 
     // Render an Empty ContextRootWrapper.  This sets up `this.contextRender`.
-    render({
-      nodeName: ContextRootWrapper,
-      attributes: {
-        vdom: null,
-        renderRef: contextRender => setHiddenProp(this, 'contextRender', contextRender),
-      },
-    }, this.fragment);
-
+    render(h(ContextRootWrapper,{
+      vdom: null,
+      renderRef: contextRender => setHiddenProp(this, 'contextRender', contextRender),
+    }), this.fragment);
   }
 
   render(vdom) {

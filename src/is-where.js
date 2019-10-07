@@ -14,8 +14,8 @@ const ATTRIBUTE_PRESENT = {exists: true};
  *
  * { attr: anotherObject } - Recurses using `_isWhere(where.attr, target.attr)`
  *
- * { nodeName: String|Function } - Matches value checking `target.nodeName`.
- *     When `target.nodeName` is a function, it tests that `name`, `displayName` match the
+ * { type: String|Function } - Matches value checking `target.type`.
+ *     When `target.type` is a function, it tests that `name`, `displayName` match the
  *     String given, or when a Function, that they are equal.
  *
  * { class: String } or { className: String } - Tests the `target.class || target.className` for
@@ -58,23 +58,23 @@ const _isWhere = (where, target) => {
       continue;
     }
 
-    // nodeName attributes
-    if (key === 'nodeName') {
+    // type attributes
+    if (key === 'type') {
       // if the target is a component
-      if (typeof target.nodeName === 'function') {
+      if (typeof target.type === 'function') {
         // match the raw function value, name value, or displayName value
-        if (target.nodeName !== value && target.nodeName.name !== value && target.nodeName.displayName !== value) {
+        if (target.type !== value && target.type.name !== value && target.type.displayName !== value) {
           return false;
         }
       }
       else if (/[a-z]/.test(value[0])) {
-        // nodeName starts with a lowercase letter = standard string nodenames
-        if (target.nodeName !== value) {
+        // type starts with a lowercase letter = standard string types
+        if (target.type !== value) {
           return false;
         }
       }
       else {
-        // some unsupported nodeName query
+        // some unsupported type query
         return false;
       }
       continue;
