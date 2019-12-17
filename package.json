@@ -1,5 +1,5 @@
 {
-  "name": "preact-render-spy",
+  "name": "@otto-de/ft5_preact-render-spy",
   "version": "1.3.0",
   "description": "Render preact components with access to the produced virtual dom for testing.",
   "repository": {
