@@ -241,8 +241,8 @@ class FindWrapper {
   text() {
     verifyFoundNodes(this);
     return Array.from(vdomWalk(this.context.vdomMap, Array.from(this)))
-      // Filter for strings (text nodes)
-      .filter(value => typeof value === 'string')
+      // Filter for primitive that can be converted to strings (text nodes)
+      .filter(value => typeof value === 'string' || typeof value === 'number' || typeof value === "boolean" || typeof value === "undefined")
       // Concatenate all strings together
       .join('');
   }
