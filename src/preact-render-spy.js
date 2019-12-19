@@ -126,7 +126,14 @@ const vdomIter = function* (vdomMap, vdom) {
   }
   yield vdom;
   if (typeof vdom.type === 'function' && vdomMap.has(vdom)) {
-    yield* vdomIter(vdomMap, vdomMap.get(vdom));
+    const vdomNode = vdomMap.get(vdom);
+    if (Array.isArray(vdomNode)) {
+      for (let i=0; i < vdomNode.length; i++) {
+        yield* vdomIter(vdomMap, vdomNode[i]);
+      }
+    } else {
+      yield* vdomIter(vdomMap, vdomNode);
+    }
   }
   else {
     for (const child of toChildArray(vdom.props && vdom.props.children)) {
