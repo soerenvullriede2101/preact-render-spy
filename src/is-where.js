@@ -28,6 +28,10 @@ const ATTRIBUTE_PRESENT = {exists: true};
 const _isWhere = (where, target) => {
   // Check each key from where
   for (const [key, value] of entries(where)) {
+    // do not recurse into private keys
+    if (key[0] === '_') {
+      continue;
+    }
 
     // If the key is set, but value is undefined, we ignore it
     if (typeof value === 'undefined') {
